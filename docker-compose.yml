@@ -1,0 +1,46 @@
+version: "3.8"
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      SA_PASSWORD: "${DB_PASSWORD}"
+      ACCEPT_EULA: "Y"
+    ports:
+      - ${DB_PORT}:1433
+    healthcheck:
+      test: [ "CMD-SHELL", "echo > /dev/tcp/localhost/1433" ]
+      interval: 5s
+      retries: 20
+    volumes:
+      - sqlserverdata:/var/opt/mssql
+
+  backend:
+    build: ./backend
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SERVER: ${DB_SERVER}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      PORT: ${PORT}
+    command: npm run dev
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - sqlserver
+    ports:
+      - ${PORT}:${PORT}
+
+  frontend:
+    build: ./frontend
+    ports:
+      - ${PORT_FRONTEND}:${PORT_FRONTEND}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  sqlserverdata:
